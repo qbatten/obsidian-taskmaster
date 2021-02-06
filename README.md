@@ -1,5 +1,34 @@
-# Learning how to write a plugin
+# next steps
+- Figure out how to use callbacks properly to save to th wrapaping class property (line 170 & 193... how do we save the evaluated lines!?)
+- Fix url and internal links selectors.
+- Fix case when you aree on activeline, click complete, and then type aadditionally on line. rn doing that undoes th whol thing
 
+## Learning how to write a plugin
+/*
+
+Things I want to do:
+- Mark to-dos via a class, differentiate incomplete from complete todo
+- Mark the line of a complete one w a strikethrough
+- Make checkbox clickable
+- On click, 
+    - If curr incomplete, mark complete: add completion X, append current datetime in an @done(sdfdfds) tag 
+    - If curr complete, mark incomplete: rmove completion X, remove done tag if present
+
+
+*/
+
+
+## Snippets
+
+#### Get cm object
+
+```js
+let allLineTokens;
+this.app.plugins.plugins['obsidian-sample-plugin'].registerCodeMirror(
+(cm) => {
+console.log(cm);
+});
+```
 
 ## Getting Tokens
 
@@ -90,3 +119,40 @@ The "[x]" token in a list item / todo has state.taskOpen = true
 * (Inside a code block, aka after ^^ that line) "this.app.plugins.plugins['obsidian-sample-plugin'].registerCodeMirror"
     * Token {start: 0, end: 0, string: "", type: null, state: {…}} 
     * Token {start: 0, end: 70, string: "this.app.plugins.plugins['obsidian-sample-plugin'].registerCodeMirror(", type: "line-HyperMD-codeblock line-background-HyperMD-codeblock-bg hmd-codeblock", state: {…}
+
+## Snippets
+
+```typescript
+let taskSpans = document.querySelectorAll('span.cm-formatting.cm-formatting-task');
+taskSpans.forEach(
+function(taskSpan) {
+        taskSpan.addEventListener("click", (ev) =>
+        {
+            let el = ev.target;
+            console.log('clicked...', el);
+            if(el.innerHTML == "[ ]") {
+                el.textContent = "[x]";
+                console.log('changing to COMPLETE');
+            } else if(el.innerHTML == "[x]") {
+                el.textContent = "[ ]";
+                console.log('changing to NOT');
+            }    
+        });
+}
+
+);
+```
+
+```typescript
+let taskComptoIncomp = function(token) {
+    if(token.type.contains(TASK_COMPLETE_INDENTIFIER)) {
+        this.cm.replaceRange('[ ]', {'line': this.line, 'ch': token.start}, 
+                                    {'line': this.line, 'ch':token.end})
+    } else if(token.type.contains(TASK_INCOMPLETE_IDENTIFIER)) {
+        this.cm.replaceRange('[x]', {'line': this.line, 'ch': token.start}, 
+                                    {'line': this.line, 'ch':token.end})
+    }
+}.bind(this)
+...
+this.cm.on(currToken, "change", console.log);
+```

@@ -1,11 +1,11 @@
  /* Hide links ((tbyIlqD3o)) */
-div:not(.CodeMirror-activeline) > .CodeMirror-line .cm-string.cm-url:not(.cm-formatting) {
+/* div:not(.CodeMirror-activeline) > .CodeMirror-line .cm-string.cm-url:not(.cm-formatting) {
     font-size: 0;
 }
 div:not(.CodeMirror-activeline) > .CodeMirror-line .cm-string.cm-url:not(.cm-formatting)::after {
     content: '🔗';
     font-size: 1rem;
-}
+} */
 
 /* Keeping styling consistent across selected and non-selected lines ((oCC21Ogb4)) */
     pre.HyperMD-header, .cm-header, .cm-header-1, .cm-header-2, .cm-header-3, .cm-header-4, .cm-header-5, .cm-header-6 { font-weight: 800; }
@@ -18,37 +18,13 @@ div:not(.CodeMirror-activeline) > .CodeMirror-line .cm-string.cm-url:not(.cm-for
 
 
     
-span.cm-formatting-task { display: inline !important; font-family: "Andale Mono"; letter-spacing: -2.5px;}
+/* span.cm-formatting-task { display: inline !important; font-family: "Andale Mono"; letter-spacing: -2.5px;} */
 /* span.cm-formatting-task.cm-property {color: lightgreen;} */
 
-.CodeMirror-line span.cm-formatting-task.cm-meta,
-.CodeMirror-line span.cm-formatting-task.cm-property,
-.CodeMirror-line span.cm-formatting-list-ul.ol-to-do {
-    color: transparent;
-    position: relative;
-}
 
-/* .CodeMirror-line span.cm-formatting-task.cm-meta:after,
-.CodeMirror-line span.cm-formatting-task.cm-property:after {
-    content: "○";
-    position: absolute;
-    top: 0px;
-    left: 3px;
-    color: var(--text-normal);
-    font-size: 28px;
-}
-
-.CodeMirror-line span.cm-formatting-task.ol-to-do-undone.cm-meta:after,
-.CodeMirror-line span.cm-formatting-task.ol-to-do-undone.cm-property:after {
-    content: "○";
-}
-.CodeMirror-line span.cm-formatting-task.ol-to-do-isdone.cm-meta:after,
-.CodeMirror-line span.cm-formatting-task.ol-to-do-isdone.cm-property:after {
-    content: "●";
-} */
 
 span.cm-formatting-task { display: inline !important; font-family: "Andale Mono"; letter-spacing: -2.5px;}
-/* span.cm-formatting-task.cm-property {color: lightgreen;} */
+span.cm-formatting-task.cm-property {color: lightgreen;}
 
 div:not(.CodeMirror-activeline)>.CodeMirror-line span.cm-formatting-task.cm-meta,
 div:not(.CodeMirror-activeline)>.CodeMirror-line span.cm-formatting-task.cm-property {
