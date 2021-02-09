@@ -9,7 +9,8 @@ import {
 
 import {
 	Editor,
-	Token
+	Token,
+	TextMarker
 } from 'codemirror'
 
 
@@ -21,28 +22,53 @@ let LIST_TYPE_IDENTIFIER = 'formatting-list';
 let TAG_TYPE_IDENTIFIER = 'hashtag-end';
 let INTERNAL_LINK_TYPE_IDENTIFIER = 'hmd-internal-link';
 
-class TaskLine {
-	app: any;
-	cm: Editor;
-	line: number;
-	allLineTokens: any;
-	lineText: string;
-	indent: number;
-	checked: boolean;
+class Task {
+	element: Element;
+	marker: TextMarker;
+	
+	parent: Task;
+	children: Task[];
+
+	taskLine: TaskContext;
+
+	checked: Boolean;
+	text: String;
 	tags: String[];
 	internalLinks: String[];
-	urls: String[];
+	externalLinks: String[];
 
+	create_date: Date;
 
-	getSpecialTokens(allLineTokens: any) {
-		let taskTokenGetChecked = function(token: Token) {
+	constructor(taskLine) {
+		this.create_date = new Date(Date.now());
+		this.taskLine = taskLine;
+	}
+}
+
+class TaskContext {
+	app: any;
+	cm: Editor;
+
+	line: number;
+	indent: number;
+
+	allLineTokens: Token[];
+
+	task: Task;
+
+	create_date: Date;
+
+	
+	getSpecialTokens(allLineTokens: any, task: Task) {
+
+		let checkboxTokenGetChecked = function(token: Token) {
 			let checkbox = token.string;
 			if(checkbox.match(/\[[xX]\]/)) {
 				return true;
 			} else if(checkbox.match(/\[ \]/)) {
 				return false;
 			}
-		}
+		};
 
 		let listTokenGetIndent = function(token: Token) {
 			let indentMatch = token.type.match(/list-(?<indent>\d+)/);
@@ -54,58 +80,65 @@ class TaskLine {
 			return tagMatch.groups.tag;
 		}
 
-		//
 		/* 
 		THIS NEEDS FIXING
 		TO HANDLE LINKS WITH A SPACE AND/OR MULTUPLE TOKENS W/IN A SINGLE LINK */
 		let internalLinkTokenGetName = function(token: Token) {
 			return token.string;
 		}
-		//
+
 		/* 
 		THIS NEEDS FIXING
 		To handle URLs that arent wrapped in mkdown urls; needs better identifier*/
-		let urlTokenGetURL = function(token: Token) {
+		let externalLinkTokenGetURL = function(token: Token) {
 			return token.string;
 		}
 
-
+		let makeMarkFromToken = function(token: Token, addClass: String,  addTitle: String) {
+			let from = {'line': this.line, 'ch':token.start}, 
+				to = {'line': this.line, 'ch': token.end},
+				opt = {'className': addClass, 'title': addTitle};
+			let marker = this.cm.doc.markText(from, to, opt);
+			return marker
+		}.bind(this);
 
 
 		for(let currToken of allLineTokens) {
-			this.lineText = this.lineText + currToken.string;
-			if(currToken.type.contains(LIST_TYPE_IDENTIFIER)) {
+			task.text = task.text ? task.text + currToken.string : currToken.string;
+			if(!currToken.type) {
+				continue;
+			} else if(currToken.type.contains(LIST_TYPE_IDENTIFIER)) {
 				this.indent = listTokenGetIndent(currToken);
 			} else if(currToken.type.contains(TASK_TYPE_IDENTIFIER)) {
-				this.checked = taskTokenGetChecked(currToken);
+				task.checked = checkboxTokenGetChecked(currToken);
+				let mark = makeMarkFromToken(currToken, 
+					null, 'TASKTMP-' + this.line);
+				task.marker = mark;
 			} else if(currToken.type.contains(TAG_TYPE_IDENTIFIER)) {
 				let tag = tagTokenGetTag(currToken) ;
-				tag && this.tags.push(tag);
+				tag && task.tags.push(tag);
 			} else if(currToken.type.contains(INTERNAL_LINK_TYPE_IDENTIFIER)) {
-				this.internalLinks.push(internalLinkTokenGetName(currToken))
+				task.internalLinks.push(internalLinkTokenGetName(currToken))
 			} else if(currToken.type.contains('string url') && !currToken.type.contains('formatting')) {
-				this.urls.push(urlTokenGetURL(currToken));
+				task.externalLinks.push(externalLinkTokenGetURL(currToken));
 			}
 		}
 
-		if(this.checked == null) {
-			throw Error(`Not a task: line ${this.line}`);
+		if(task.checked == null) {
+			throw Error(`Not a task: line ${this.line}, L124`);
 		}
-		
+
+		return task;
 	}
 
-	
-
 	constructor(app: any, cm: any, line: number) {
+		this.create_date = new Date(Date.now());
 		this.app = app;
 		this.cm = cm;
 		this.line = line;
 		this.allLineTokens = cm.getLineTokens(line);
-		this.tags = [];
-		this.internalLinks = [];
-		this.urls = [];
-		this.lineText = "";
-	    this.getSpecialTokens(this.allLineTokens);
+		this.task = this.getSpecialTokens(this.allLineTokens, new Task(this));
+
 		
 	}
 
@@ -115,75 +148,94 @@ class TaskLine {
 
 export default class TestPlugin extends Plugin {
 
-	cms: CodeMirror.Editor[]
-	linesEvaluated: any[]
+	linesEvaluated: {};
+	tasks: Task[];
 
-	evalLines(cm) {
+	evalLines(cm): TaskContext[] {
+		let linesEvaluated: TaskContext[] = [];
 		let i: number = 0;
 		cm.eachLine((line) => {
 			try {
-				let newLine = new TaskLine(this, cm, i);
-				this.linesEvaluated[i] = newLine;
-			} catch {
-				
+				let newLine = new TaskContext(this, cm, i);
+				linesEvaluated[i] = newLine;
+			} catch(e) {
+				// console.log(e);
 			} finally {
 				i++;
 			}
 		});
+		return linesEvaluated;
 	}
-	
-	addListenerAndRegister(taskSpan: HTMLElement) {
+
+
+
+	getElementAddListenerFromMark(line: TaskContext) {
+
+		let getElementFromMark = function(mark: TextMarker) {
+			let el = document.querySelector('[title~=' + mark.title + ']')
+			return el;
+		}
 		
+
 		let markComplete = function (el) {
-			el.textContent = "[x]";
+			let found = this.task.marker.find();
+			this.cm.replaceRange('[x]', found.from, found.to);
 			el.removeClass("cm-meta");
 			el.addClass("cm-property");
-			console.log('uncom->COMP', el);
-		};
+		}.bind(line);
 		
 		let markIncomplete = function(el) {
-			el.textContent = "[ ]";
+			let found = this.task.marker.find();
+			this.cm.replaceRange('[ ]', found.from, found.to);
 			el.removeClass("cm-property");
 			el.addClass("cm-meta");
-			console.log('COMP->uncomp', el);
-		}.bind(this);
+		}.bind(line);
 
 		let taskClickEventListener = (ev) =>
 		{
 			
 			let el = ev.target as HTMLElement;
 			if(el.innerHTML == "[ ]") {
-
 				markComplete(el);
 			} else if(el.innerHTML == "[x]") {
 				markIncomplete(el);
 			}    
 		};
-
-		taskSpan.onclick = taskClickEventListener;
-		console.log('added listener');
-	}
-
-	refreshListeners() {
-		let taskSpans = document.querySelectorAll('span.cm-formatting.cm-formatting-task');
-		console.log(taskSpans);
-		taskSpans.forEach(this.addListenerAndRegister);
+		let mark = line.task.marker;
+		let el: any = getElementFromMark(mark);
+		console.log(mark, el);
+		el.onclick = taskClickEventListener;
+		return el;
 	}
 
 	async onload() {
-		
-		this.linesEvaluated = [];
-
-		let fullRecheck = function(cm) {
-			this.evalLines(cm);
-			this.refreshListeners();
+		this.linesEvaluated = {};
+		let fullRecheck = function(cm: CodeMirror.Editor, changes) {
+			let linesToCheck: number[] = [];
+			let newLinesToCheck: number[] = [];
+			changes && changes.forEach(change => {
+				let fromLine = change.from.line, toLine = change.to.line;
+				newLinesToCheck = range(toLine + 1).slice(fromLine,);
+				newLinesToCheck.forEach((num) => {
+					linesToCheck.contains(num) || linesToCheck.push(num);
+					// console.log('changeForEach',newLinesToCheck, num,linesToCheck)
+				});
+				// console.log('procChange', {changes, change, linesToCheck, newLinesToCheck})
+			});
+			// console.log('procD', changes, linesToCheck);
+			let linesEvaluated = this.evalLines(cm);
+			linesEvaluated.forEach((line: TaskContext) => {
+				let a = this.getElementAddListenerFromMark(line);
+				line.task.element = a;
+			});
+			linesEvaluated && Object.assign(this.linesEvaluated, linesEvaluated);
+			// console.log('linesEval',linesEvaluated )
 		}.bind(this);
 
-		let evalLinesCaller = function(cm: Editor) {
-			fullRecheck(cm);
-			cm.on('cursorActivity', fullRecheck);
-		}
-		this.registerCodeMirror(evalLinesCaller);
+		this.registerCodeMirror(function(cm: Editor) {
+			fullRecheck(cm, null);
+			cm.on("changes", fullRecheck);
+		});
 	}
 
 }

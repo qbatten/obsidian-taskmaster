@@ -22,6 +22,45 @@ Things I want to do:
 
 #### Get cm object
 
+
+## Snippets
+
+```typescript
+let taskSpans = document.querySelectorAll('span.cm-formatting.cm-formatting-task');
+taskSpans.forEach(
+function(taskSpan) {
+        taskSpan.addEventListener("click", (ev) =>
+        {
+            let el = ev.target;
+            console.log('clicked...', el);
+            if(el.innerHTML == "[ ]") {
+                el.textContent = "[x]";
+                console.log('changing to COMPLETE');
+            } else if(el.innerHTML == "[x]") {
+                el.textContent = "[ ]";
+                console.log('changing to NOT');
+            }    
+        });
+}
+
+);
+```
+
+```typescript
+let taskComptoIncomp = function(token) {
+    if(token.type.contains(TASK_COMPLETE_INDENTIFIER)) {
+        this.cm.replaceRange('[ ]', {'line': this.line, 'ch': token.start}, 
+                                    {'line': this.line, 'ch':token.end})
+    } else if(token.type.contains(TASK_INCOMPLETE_IDENTIFIER)) {
+        this.cm.replaceRange('[x]', {'line': this.line, 'ch': token.start}, 
+                                    {'line': this.line, 'ch':token.end})
+    }
+}.bind(this)
+...
+this.cm.on(currToken, "change", console.log);
+```
+
+**CONSOLE - GET CM OBJ**
 ```js
 let allLineTokens;
 this.app.plugins.plugins['obsidian-sample-plugin'].registerCodeMirror(
@@ -120,39 +159,13 @@ The "[x]" token in a list item / todo has state.taskOpen = true
     * Token {start: 0, end: 0, string: "", type: null, state: {…}} 
     * Token {start: 0, end: 70, string: "this.app.plugins.plugins['obsidian-sample-plugin'].registerCodeMirror(", type: "line-HyperMD-codeblock line-background-HyperMD-codeblock-bg hmd-codeblock", state: {…}
 
-## Snippets
 
-```typescript
-let taskSpans = document.querySelectorAll('span.cm-formatting.cm-formatting-task');
-taskSpans.forEach(
-function(taskSpan) {
-        taskSpan.addEventListener("click", (ev) =>
-        {
-            let el = ev.target;
-            console.log('clicked...', el);
-            if(el.innerHTML == "[ ]") {
-                el.textContent = "[x]";
-                console.log('changing to COMPLETE');
-            } else if(el.innerHTML == "[x]") {
-                el.textContent = "[ ]";
-                console.log('changing to NOT');
-            }    
-        });
-}
 
-);
-```
+# Performance improvement
 
-```typescript
-let taskComptoIncomp = function(token) {
-    if(token.type.contains(TASK_COMPLETE_INDENTIFIER)) {
-        this.cm.replaceRange('[ ]', {'line': this.line, 'ch': token.start}, 
-                                    {'line': this.line, 'ch':token.end})
-    } else if(token.type.contains(TASK_INCOMPLETE_IDENTIFIER)) {
-        this.cm.replaceRange('[x]', {'line': this.line, 'ch': token.start}, 
-                                    {'line': this.line, 'ch':token.end})
-    }
-}.bind(this)
-...
-this.cm.on(currToken, "change", console.log);
-```
+- With TestDoc, 
+  - a keypress took ~95ms for evalLines
+  - checkbox 
+    - ~101ms for taskClickEventListener
+    - ~92ms evalLines
+    - 
